@@ -18,7 +18,7 @@ int main() {
 
     while (1) {
         for (int i = 0; i < 256; i++) {
-            if (GetAsyncKeyState(i) & 0x0001) {  // Check if key is pressed
+            if (GetAsyncKeyState(i) & 0x0001) {  // Check if key is pressed or released
                 switch (i) {
                     // Alphanumeric keys
                     case 'A' ... 'Z':
