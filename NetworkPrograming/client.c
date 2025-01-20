@@ -1,36 +1,67 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <winsock2.h>
-#include <ws2tcpip.h>
 #include <windows.h>
 
-int main(){
+#define SERVER_IP "192.168.1.14"  // Change this to the Linux server IP
+#define SERVER_PORT 8080
+#define BUF_SIZE 1024
+
+// Function to send keystrokes to the server
+void send_keystroke(SOCKET sock, const char* key) {
+    send(sock, key, strlen(key), 0);
+}
+
+int main() {
     WSADATA wsaData;
     SOCKET sock;
-    struct sockaddr_in _server;
-    if(WSAStartup(MAKEWORD(2, 2), &wsaData)) {
-        printf("Initialization failed\n");
+    struct sockaddr_in server;
+    char key_buffer[BUF_SIZE];
+
+    // Initialize Winsock
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        printf("WSAStartup failed with error\n");
         return 1;
     }
-    sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if(sock == INVALID_SOCKET) {
+    // Create socket
+    if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET) {
         printf("Socket creation failed\n");
-        WSACleanup();
         return 1;
     }
 
-    _server.sin_family = AF_INET;
-    _server.sin_port = htons(22);
-    _server.sin_addr.s_addr = inet_addr("192.168.1.12");
-    if(connect(sock, (SOCKADDR*)&_server, sizeof(_server)) == SOCKET_ERROR) {
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = inet_addr(SERVER_IP);
+    server.sin_port = htons(SERVER_PORT);
+
+    // Connect to the server
+    if (connect(sock, (struct sockaddr *)&server, sizeof(server)) == SOCKET_ERROR) {
         printf("Connection failed\n");
-        WSACleanup();
         return 1;
     }
-    printf("Connected to server\n");
-    while(1) {
-        char buffer[1024];
-        fgets(buffer, sizeof(buffer), stdin);
-        send(sock, buffer, sizeof(buffer), 0);
+
+    printf("Connected to server...\n");
+    char name[7];
+    fgets(name, sizeof(name),stdin);
+    if(send(sock, name, strlen(name), 0) < 0) {
+        printf("Error sending name\n");
+        return 1;
+    } else {
+        printf("Name sent successfully\n");
     }
+    
+    // Start capturing keystrokes
+    while (1) {
+        char message[1024];
+        fgets(message, 1024, stdin);
+        if(send(sock, message, strlen(message), 0) < 0) {
+            printf("Error sending message\n");
+            return 1;
+        }
+    }
+
+    // Cleanup
+    closesocket(sock);
+    WSACleanup();
     return 0;
 }
