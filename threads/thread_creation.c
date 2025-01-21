@@ -46,11 +46,6 @@ int main() {
     alphabetsThread = CreateThread(NULL, 0, PrintLetters, NULL, 0, &alphabetsThreadId);
     symbolsThread = CreateThread(NULL, 0, PrintSymbols, NULL, 0, &symbolsThreadId);
 
-    // Set thread priorities for parallel execution (optional)
-    SetThreadPriority(numbersThread, THREAD_PRIORITY_ABOVE_NORMAL);
-    SetThreadPriority(alphabetsThread, THREAD_PRIORITY_ABOVE_NORMAL);
-    SetThreadPriority(symbolsThread, THREAD_PRIORITY_ABOVE_NORMAL);
-
     // Error checking
     if (numbersThread == NULL) {
         printf("Error creating numbers thread: %d\n", GetLastError());
@@ -69,6 +64,5 @@ int main() {
     WaitForSingleObject(numbersThread, INFINITE);
     WaitForSingleObject(alphabetsThread, INFINITE);
     WaitForSingleObject(symbolsThread, INFINITE);
-
     return 0;
 }
