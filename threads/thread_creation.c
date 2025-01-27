@@ -45,7 +45,17 @@ int main() {
     numbersThread = CreateThread(NULL, 0, PrintNumbers, NULL, 0, &numbersThreadId);
     alphabetsThread = CreateThread(NULL, 0, PrintLetters, NULL, 0, &alphabetsThreadId);
     symbolsThread = CreateThread(NULL, 0, PrintSymbols, NULL, 0, &symbolsThreadId);
-
+    /*  
+        signature of the CreateThread function
+        HANDLE CreateThread(
+        LPSECURITY_ATTRIBUTES lpThreadAttributes, // Default or custom security attributes
+        SIZE_T dwStackSize,                       // Stack size
+        LPTHREAD_START_ROUTINE lpStartAddress,    // Thread function
+        LPVOID lpParameter,                       // Thread function parameter
+        DWORD dwCreationFlags,                    // Creation flags
+        LPDWORD lpThreadId                        // Thread ID
+        );
+    */
     // Error checking
     if (numbersThread == NULL) {
         printf("Error creating numbers thread: %d\n", GetLastError());

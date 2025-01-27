@@ -42,6 +42,16 @@ int main() {
         printf("CreateEvent failed (%d)\n", GetLastError());
         return 1;
     }
+    /*
+        Event functio signature
+        HANDLE CreateEvent(
+            LPSECURITY_ATTRIBUTES lpEventAttributes, // Security attributes (usually NULL for defaults)
+            BOOL bManualReset,                       // Manual-reset or auto-reset event
+            BOOL bInitialState,                      // Initial state: signaled or non-signaled
+            LPCSTR lpName                            // Name of the event (optional, can be NULL)
+        );
+
+    */
 
     // Create producer and consumer threads
     hProducer = CreateThread(NULL, 0, Producer, NULL, 0, NULL);
