@@ -105,7 +105,7 @@ loop_back:
 	    pthread_cancel(thread);
 	    goto loop_back;
 	}
-	printf("%d", &check);
+//	printf("%d", &check);
     }
     // Step 7: Close sockets
     close(new_socket);
