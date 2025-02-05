@@ -25,7 +25,6 @@ DWORD WINAPI IncrementCounter(LPVOID lpParam) {
 
 int main() {
     HANDLE threads[NUM_THREADS];
-    
     // Create the mutex (initially not locked)
     hMutex = CreateMutex(NULL, FALSE, NULL);
     

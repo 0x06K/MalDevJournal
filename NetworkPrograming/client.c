@@ -5,7 +5,7 @@
 #include <windows.h>
 
 
-#define SERVER_IP "192.168.1.13"  // Change this to the Linux server IP
+#define SERVER_IP "192.168.1.14"  // Change this to the Linux server IP
 #define SERVER_PORT 2005
 #define BUF_SIZE 1024
 
@@ -23,7 +23,7 @@ DWORD WINAPI send_file(LPVOID lpBuffer) {
             printf("Error opening file\n");
             return -1;
         }
-        while ((bytes_sent = fread(buffer, sizeof(char), BUF_SIZE, fp)) > 0) {
+        while ((bytes_sent = fread(buffer, sizeof(char), BUF_SIZE-1, fp)) > 0) {
             send(sock, buffer, bytes_sent, 0);
         }
         if (bytes_sent == 0) {
