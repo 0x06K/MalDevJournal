@@ -1,0 +1,2 @@
+MOV AX, 100
+MOV BX, AX
