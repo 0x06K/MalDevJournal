@@ -1,0 +1,4 @@
+MOV AX, 50
+MOV BX, 30
+SUB AX, BX
+MOV [4000H], AX 

@@ -1,0 +1,2 @@
+MOV AX, [2000H]
+SUB AX, 5

@@ -1,0 +1,3 @@
+MOV AX, [6000H]
+SUB AX, 1
+MOV [6000H], AX

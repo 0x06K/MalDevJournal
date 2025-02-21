@@ -1,0 +1,2 @@
+MOV AX, 10
+ADD AX, 5
