@@ -1,0 +1,5 @@
+MOV AX, 5
+MOV BX, 3
+MOV CX, 2
+ADD AX, BX
+ADD AX, CX

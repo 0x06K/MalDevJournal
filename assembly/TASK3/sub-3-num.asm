@@ -1,0 +1,5 @@
+MOV AX, 10
+MOV BX, 2
+MOV CX, 3
+SUB AX, BX
+SUB AX, CX 
