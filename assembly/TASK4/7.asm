@@ -1,0 +1,2 @@
+MOV AX, 1234H
+INC AX
