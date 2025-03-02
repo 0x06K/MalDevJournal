@@ -9,7 +9,7 @@ includelib kernel32.lib
 main PROC
     mov EAX, 5          ; Load first operand
     add EAX, 10         ; Perform addition (5 + 10)
-    
+    sub EAX, 2
     invoke ExitProcess, 0  ; Exit program cleanly
 main ENDP
 END main
