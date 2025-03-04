@@ -18,7 +18,7 @@ extern scanf:proc
     number dd ?
     greater db "The number is greater than 50.", 0
     lesser db "The number is less than 50.", 0
-
+    equal db "The number is equal to 50.", 0
 .code
 main PROC
     ; Display the prompt
@@ -33,12 +33,18 @@ main PROC
     mov EAX, number
     cmp EAX, 50
     jg true
-    push OFFSET lesser
+    jl false
+    push OFFSET equal
     call printf
     ret
     true:
         push OFFSET greater
         call printf
         ret
+    false:
+        push OFFSET lesser
+        call printf
+        ret
+
 main ENDP
 end main
