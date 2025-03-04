@@ -13,7 +13,7 @@ extern printf:proc
 extern scanf:proc
 
 .data
-    prompt db "Enter a number between 1 and 100:", 0
+    prompt db "Enter a number between 1 and 100: ", 0
     format db "%d", 0
     number dd ?
     greater db "The number is greater than 50.", 0
@@ -21,15 +21,24 @@ extern scanf:proc
 
 .code
 main PROC
-    
+    ; Display the prompt
     push OFFSET prompt
     call printf
 
+    ; Read the number
     push OFFSET number
     push OFFSET format
     call scanf
 
- 
-    
+    mov EAX, number
+    cmp EAX, 50
+    jg true
+    push OFFSET lesser
+    call printf
+    ret
+    true:
+        push OFFSET greater
+        call printf
+        ret
 main ENDP
 end main
