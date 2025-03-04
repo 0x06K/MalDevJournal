@@ -1,4 +1,0 @@
-MOV AL, 4
-INC AL
-MOV BL, 3
-MUL BL

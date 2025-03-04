@@ -1,3 +1,0 @@
-MOV AX, 10
-MOV BX, 4
-SUB AX, BX

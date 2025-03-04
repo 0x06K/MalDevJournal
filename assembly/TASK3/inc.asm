@@ -1,2 +1,0 @@
-MOV AX, 5
-ADD AX, 1 

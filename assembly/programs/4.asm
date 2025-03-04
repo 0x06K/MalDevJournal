@@ -1,13 +1,18 @@
-TITLE Input from User - Read user input.
+TITLE Input from User - Read user input and print it.
 
 .386
 .model flat, stdcall
 .stack 4096
-include windows.inc
+option casemap :none
+
+
 include kernel32.inc
-include msvcrt.inc
+
 includelib kernel32.lib
 includelib msvcrt.lib
+
+extern printf:proc
+extern scanf:proc
 
 .data
     format db "%d", 0   ; Format string for scanf (integer)

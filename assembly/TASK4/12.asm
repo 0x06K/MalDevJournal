@@ -1,6 +1,0 @@
-MOV CX, 5
-MOV AX, 2
-LOOP_START:
-    MUL AX
-    DEC CX
-    JNZ LOOP_START

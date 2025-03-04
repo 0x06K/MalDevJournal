@@ -1,2 +1,0 @@
-MOV AX, 15
-SUB AX, 3
