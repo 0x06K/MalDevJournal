@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <Userenv.h>
 #include <winbase.h>
-
+// this technique is not process hollowing
 BOOL CreateSystemProcess() {
     HANDLE hToken;
     HANDLE hDupToken;
