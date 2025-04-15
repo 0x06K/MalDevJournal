@@ -1,3 +1,4 @@
+# Taking a short break, this is going to be a lifelong journey, So i will work on it later.
 ### MalDevJournal
 This is my personal collection of malware development notes, tools, code snippets, and resources I explore and learn from. It’s my go-to place to keep everything organized and handy.
 
