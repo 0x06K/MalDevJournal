@@ -1,9 +1,0 @@
-			The more you explore, the more you learn
-
-if you don't understand something it is totally fine just skip and move to next video, with time you will grasp everything :)
-channels:
-reverse engineering -> https://www.youtube.com/@OALABS 
-------------------------------------------------------------------------------------------------------------------
-windows internal: https://youtu.be/r440y3cICRA?si=EmgBXzu303SC664x (playlist) 
-windows internal: https://youtu.be/4AkzIbmI3q4?si=QucLJwZucVA-Mc4Q (playlist)
-Understanding The PEB for Reverse Engineers :https://youtu.be/uyisPPTupmA?si=rzQPS0c_lFyAoAVv
